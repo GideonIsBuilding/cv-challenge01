@@ -5,6 +5,7 @@ services:
     container_name: prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.external-url=/prometheus'
     ports:
       - 9090:9090
     restart: unless-stopped
@@ -22,10 +23,15 @@ services:
     restart: unless-stopped
     ports:
       - '3000:3000'
+    environment:
+      - GF_SERVER_ROOT_URL=http://104.248.122.250:3000/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
     volumes:
       - grafana-storage:/var/lib/grafana
     networks:
       - app-network
+    depends_on:
+      - loki
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
@@ -49,6 +55,25 @@ services:
       - 6379:6379
     networks:
       - app-network
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - 3100:3100
+    networks:
+      - app-network
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yaml
+
+  promtail:
+    image: grafana/promtail:latest
+    networks:
+      - app-network
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/promtail-config.yaml
+      - /var/log:/var/log
+    depends_on:
+      - loki
 
 volumes:
   prom_data:
