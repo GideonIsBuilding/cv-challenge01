@@ -1,161 +1,209 @@
-# Full-Stack FastAPI and React Template - DevOps November CV Challenge
+### **Documentation for Setting Up the Application and Monitoring Stack**
 
-Welcome to the **Full-Stack FastAPI and React Template** repository! This project serves as a demo application for the **DevOps November Resume Challenge**, where participants will deploy a full-stack application with a **FastAPI** backend and **ReactJS** frontend using **ChakraUI**. Additionally, participants will set up monitoring and logging tools, configure a reverse proxy, and deploy the application to a cloud platform, showcasing their end-to-end DevOps skills.
-
----
-
-## Challenge Overview
-
-As part of this challenge, your primary goal is to:
-
-1. Dockerize a full-stack application with a FastAPI backend and React frontend.
-2. Configure and deploy monitoring and logging tools including Prometheus, Grafana, Loki, Promtail, and cAdvisor.
-3. Set up a reverse proxy for application routing.
-4. Deploy the application to a cloud platform with proper domain configuration.
-5. Submit a working repository with detailed documentation and screenshots of your deployed application.
+This guide will walk you through deploying a monitoring stack, including **Prometheus**, **Grafana**, **cAdvisor**, and **NGINX Proxy Manager**, step by step. We’ll also highlight the purpose of each step so you can understand why it’s necessary.
 
 ---
 
-## Challenge Requirements
+### **1. File Structure Overview**
 
-1. **Dockerization and Orchestration**:  
-   - Write `Dockerfile`s to containerize both the **React frontend** and **FastAPI backend**.
-   - Create two `docker-compose.yml` files:
-     1. **Application Stack Compose**:  
-        Orchestrate the following services:
-        - React frontend.
-        - FastAPI backend.
-        - PostgreSQL database.
-        - Adminer (for database management).
-        - Reverse Proxy (Traefik or Nginx Proxy Manager).
-     2. **Monitoring Stack Compose**:  
-        Orchestrate the following services:
-        - Prometheus.
-        - Grafana.
-        - Loki and Promtail.
-        - **cAdvisor** for monitoring container performance.
-     - Ensure both Docker Compose files are connected to a common Docker network to allow inter-container communication.
-
-2. **Reverse Proxy Configuration**:  
-   Use **Traefik** or **Nginx Proxy Manager** in the **Application Stack Compose** to:
-   - Serve the **frontend** on `/` (the root path).
-   - Proxy `/api` to the FastAPI backend.
-   - Proxy `/docs` to the FastAPI backend's Swagger documentation.
-   - Proxy `/prometheus` to the Prometheus web UI (via the Monitoring Stack).
-   - Proxy `/grafana` to the Grafana web UI (via the Monitoring Stack).
-   - Ensure all routes are properly secured and accessible.
-
-3. **Database Configuration**:  
-   - Use PostgreSQL as the backend database.
-   - Configure Adminer for database management and ensure it is accessible via `db.domain`.
-
-4. **Monitoring and Logging**:  
-   - Set up the following tools using the **Monitoring Stack Compose**:
-     - **Prometheus** for collecting application metrics.
-     - **Grafana** for visualizing metrics and logs.
-     - **Loki** and **Promtail** for log aggregation and forwarding.
-     - **cAdvisor** to monitor container metrics and performance.
-   - Ensure Prometheus is scraping metrics from the backend, and Grafana is configured with dashboards for logs and metrics.
-   - Ensure that all monitoring dashboards (Prometheus, Grafana, and cAdvisor) are routed through the reverse proxy (Traefik or Nginx Proxy Manager) in the **Application Stack Compose**.
-   - Create a cAdvisor Dashboard in Grafana**:
-     - Integrate **cAdvisor** with **Grafana** to display container performance metrics such as CPU usage, memory usage, disk I/O, and network I/O.
-     - Create a custom Grafana dashboard that visualizes container metrics from cAdvisor.
-     - Ensure the dashboard has proper panels for the most important container metrics.
-
-   - Add Loki as a Data Source in Grafana**:
-     - Integrate **Loki** into **Grafana** to enable log aggregation and visualization.
-     - Ensure that **Loki** is set up as a data source in **Grafana** and logs from the application and containers are sent to it.
-     - Include a panel in Grafana that visualizes logs from Loki, which could be useful for troubleshooting or monitoring application performance.
-
-5. **Cloud Deployment**:  
-   - Deploy the application stack to a cloud platform (AWS, GCP, or Azure) using Docker Compose.
-   - Set up a domain for your application (e.g., `your-app.domain.com`).
-   - If you don’t have a domain, obtain a free subdomain from [Afraid DNS](https://freedns.afraid.org/).
-   - Configure:
-     - HTTP to redirect to HTTPS.
-     - `www` to redirect to the non-`www` domain.
-
-6. **Article**:  
-   - Write and publish a detailed **Article** about the project. Your article should include:
-     - An overview of the project and its purpose.
-     - Step-by-step instructions on how you containerized, orchestrated, and deployed the application.
-     - Screenshots of your setup, including:
-       - The deployed application.
-       - Grafana dashboards showing metrics and logs.
-       - Reverse proxy configuration.
-     - Challenges you faced and how you resolved them.
-     - Lessons learned and tips for others.
-   - Include the link to your Medium article in your submission.
----
-## Project Structure
-
-The repository is organized as follows:
-
-- **frontend**: Contains the ReactJS application.
-- **backend**: Contains the FastAPI application and PostgreSQL database integration.
-
-Each directory includes its own README file with detailed instructions:
-
-- [Frontend README](./frontend/README.md)
-- [Backend README](./backend/README.md)
+From the provided structure:
+- **backend**: Contains backend application Dockerfiles and configurations.
+- **frontend**: Contains frontend application files and an `nginx.conf` file.
+- **monitoring**: Contains configuration files for monitoring tools like Prometheus, Loki, and Promtail. Also contains the docker compose file for the spinning them up and ensuring they interact with fullstack application services. 
+- **docker-compose.yml**: Combines all services (monitoring, backend, and frontend) into a single deployment.
+- **README.md**: Explains the purpose and usage of the project.
+- **LICENSE**: Specifies licensing terms.
 
 ---
 
-## Getting Started
+### **2. Prerequisites**
 
-### Clone the Repository
+Before starting:
+1. **Install Docker** and **Docker Compose** on your system:
+   ```bash
+   sudo apt update && sudo apt upgrade -y
+   sudo apt install docker.io -y
+   sudo apt install docker-compose-v2 -y
+   sudo usermod -aG docker $USER
+   ```
+2. Ensure your machine has at least:
+   - 4GB RAM
+   - Stable internet connection for pulling images.
 
-Start by cloning this repository to your local machine:
+---
 
+### **3. Understanding the Components**
+
+- **Backend and Frontend**:
+  - Backend: Your application logic (e.g., API services).
+  - Frontend: The user interface served by an NGINX server.
+- **Monitoring Tools**:
+  - **Prometheus**: Scrapes metrics from services.
+  - **Grafana**: Visualizes the metrics for better insights.
+  - **cAdvisor**: Collects container-specific metrics like CPU, memory, and disk usage.
+- **NGINX Proxy Manager**:
+  - Acts as a reverse proxy for routing and securing traffic.
+
+---
+
+### **4. File Details**
+
+#### **4.1 Backend**
+- Contains the backend application logic and **Dockerfile** for containerization.
+- Purpose: Allows the backend to be run in a Docker container.
+
+#### **4.2 Frontend**
+- Contains `nginx.conf`, which configures how the frontend serves static files.
+- Purpose: Provides the user-facing portion of the application.
+
+#### **4.3 Monitoring**
+- Contains configuration files for Prometheus, Grafana, and other monitoring services.
+- Purpose: To monitor the health, performance, and resource usage of your applications.
+
+#### **4.4 Docker Compose**
+- Combines all services into one deployment.
+- Purpose: Simplifies launching all services with one command.
+
+---
+
+### **5. Deployment Steps**
+
+#### **Step 1: Clone the Repository**
+Clone the repository to your local system:
 ```bash
-git clone <repository-url>
-cd <repository-folder>
+git clone https://github.com/GideonIsBuilding/cv-challenge01.git
+cd cv-challenge01
 ```
 
+---
 
-## Testing and Evaluation
-
-Your hosted application will be evaluated based on the following criteria:  
-
-1. **Dockerization**:  
-   - Verify that the `Dockerfile`s and `docker-compose.yml` work seamlessly to build and run the application.  
-
-2. **Reverse Proxy**:  
-   - Confirm that the application routes are correctly configured (frontend on `/`, backend `/api`, and backend docs `/docs`).  
-
-3. **Database Setup**:  
-   - Ensure PostgreSQL is properly configured and Adminer is accessible via `db.domain`.  
-
-4. **Monitoring and Logging**:  
-   - Test that Prometheus scrapes application metrics and Grafana displays metrics and logs.
-   - Ensure that cAdvisor metrics are displayed properly in the Grafana dashboard.
-   - Ensure that Logs from Loki Can be visualized in Grafana.
-
-5. **Cloud Deployment**:  
-   - Confirm the application is deployed to the cloud and accessible via a public URL.  
-   - Check that HTTP redirects to HTTPS, and `www` redirects to the non-`www` domain.  
-
-6. **Repository Validation**:  
-   - Verify that running `docker-compose up -d` from your repository correctly deploys the application and all supporting services.  
-
-7. **Article**:  
-   - Evaluate the clarity, detail, and technical depth of the published article.  
-
+#### **Step 2: Navigate to the Directory and Start the Application Services**
+Here, in the root folder, you will find the `docker-compose.yml` file. Enter and run the following command:
+```bash
+docker-compose -p cv-challenge -f docker-compose.yml up -d
+```
 
 ---
 
-## Submission Guidelines
+#### **Step 3: Configure Prometheus**
+Prometheus needs a configuration file (`prometheus.yml`) to define which targets to scrape metrics from.
 
-1. Deploy the application stack and ensure all services are running correctly.  
-2. Submit the following:  
-   - A link to your **GitHub repository** containing all files (`Dockerfile`, `docker-compose.yml`, configurations, etc.).  
-   - A link to your **Article**.  
-   - Screenshots of:  
-     - The deployed application.  
-     - Metrics and logs displayed in Grafana.  
-     - Reverse proxy routes and configurations.  
+1. Go to the **monitoring** folder.
+2. Ensure there is a `prometheus.yml` file with the following contents:
+   ```yaml
+   global:
+     scrape_interval: 15s
+
+   scrape_configs:
+     - job_name: "prometheus"
+       static_configs:
+         - targets: ["localhost:9090"]
+     - job_name: "cadvisor"
+       static_configs:
+         - targets: ["cadvisor:8080"]
+   ```
+   **Why?** This tells Prometheus to scrape metrics from itself (`localhost:9090`) and cAdvisor (`cadvisor:8080`).
 
 ---
 
+#### **Step 4: Update Environment Variables for Grafana**
+Grafana needs to know the root URL if it’s being accessed via a subpath (e.g., `/grafana`).
 
-Good luck with this Challenge! This is your opportunity to showcase your end-to-end DevOps skills and stand out to potential employers.
+1. Open the `docker-compose.yml` file.
+2. Under the **Grafana service**, add:
+   ```yaml
+   environment:
+     - GF_SERVER_ROOT_URL=http://localhost/grafana
+     - GF_SERVER_SERVE_FROM_SUB_PATH=true
+   ```
+   **Why?** This ensures Grafana correctly serves its dashboard when accessed at `/grafana`.
+
+---
+
+#### **Step 5: Start the Monitoring Stack**
+Run the following command to bring up all services:
+```bash
+docker-compose -p cv-challenge -f docker-compose.yml up -d
+```
+- `-d`: Runs the containers in detached mode.
+
+**Why?** This starts all services in the background, allowing them to interact with each other.
+
+---
+
+#### **Step 6: Configure Reverse Proxy in NGINX Proxy Manager**
+If you’re using NGINX Proxy Manager, create a **single proxy host** for `localhost`, and add the following **custom locations**:
+1. `/grafana` -> Forward to `http://grafana:3000`
+2. `/prometheus` -> Forward to `http://prometheus:9090`
+3. `/api` -> Forward to `http://backend:8000`
+4. `/docs` -> Forward to `http://backend:8000`
+- Then click on the gear button besides the location fild. This opens up a field to enter the advanced configurations. Enter in the following:
+```
+proxy_set_header Host $host;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+```
+
+**Why?** This makes the services accessible through specific paths.
+
+---
+
+#### **Step 7: Access the Services**
+- **Prometheus**: `http://localhost/prometheus`
+- **Grafana**: `http://localhost/grafana`
+.. and so on.
+
+---
+
+### **6. Key Features**
+
+1. **Monitoring with Grafana and Prometheus**:
+   - Add Prometheus as a data source in Grafana.
+   - Use dashboards to visualize container metrics (CPU, memory, disk usage).
+
+2. **Frontend and Backend Deployment**:
+   - The backend API and frontend UI are deployed in separate containers.
+
+3. **Reverse Proxy with NGINX Proxy Manager**:
+   - Centralized routing for easy access to services.
+
+---
+
+### **7. Troubleshooting**
+
+#### **Issue: Prometheus Target Shows 404**
+- Check if `/metrics` is accessible:
+  ```bash
+  curl http://localhost:9090/metrics
+  ```
+- Fix the `prometheus.yml` file or ensure no subpath issues exist.
+
+#### **Issue: Grafana Dashboard Not Loading**
+- Verify `GF_SERVER_ROOT_URL` and `GF_SERVER_SERVE_FROM_SUB_PATH` are set correctly.
+
+#### **Issue: Services Not Starting**
+- Run:
+  ```bash
+  docker-compose logs <service-name>
+  ```
+  Check for error messages in the logs.
+
+---
+
+### **8. Next Steps**
+
+1. **Secure the Setup**:
+   - Use SSL certificates with NGINX Proxy Manager.
+   - Restrict access to monitoring tools using basic authentication.
+
+2. **Expand Monitoring**:
+   - Add Node Exporter for host-level metrics.
+   - Integrate Alertmanager with Prometheus for alerting.
+
+3. **Automate Deployment**:
+   - Use CI/CD pipelines to automate deployments for the backend, frontend, and monitoring stack.
+
+---
+
+### **Final Notes**
+
+This guide simplifies deploying a monitoring stack for your containerized applications. If you encounter any issues, refer to the troubleshooting section or logs for insights. Let me know if you need further help! 😊
