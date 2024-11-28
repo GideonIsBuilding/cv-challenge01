@@ -185,7 +185,7 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
   ```bash
   docker-compose logs <service-name>
   ```
-  Check for error messages in the logs.
+  Check for error messages in the logs. Or just check if the firewall for that service is preventing the interacting. For example, while your cAdvisor may be configured well, you may get the `context deadline exceeded` error. Watch out for such errors!
 
 ---
 
